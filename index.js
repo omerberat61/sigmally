@@ -142,9 +142,8 @@ function draw() {
   const camX = me ? me.x : mapSize / 2;
   const camY = me ? me.y : mapSize / 2;
 
-  // Kamera Zoom Hesaplama (Hücre büyüdükçe zoom küçülür, harita uzaklaşır)
   let targetZoom = me ? Math.min(1, Math.max(0.3, 40 / me.r)) : 1;
-  currentZoom += (targetZoom - currentZoom) * 0.1; // Yumuşak geçiş efekti
+  currentZoom += (targetZoom - currentZoom) * 0.1;
 
   ctx.save();
   ctx.translate(canvas.width / 2, canvas.height / 2);
@@ -185,16 +184,23 @@ function draw() {
     ctx.stroke();
   });
 
-  // Oyuncular
+  // Oyuncular (Gelişmiş Skin & Glow Efekti)
   Object.values(players).forEach(p => {
+    ctx.save();
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = p.color;
+
     ctx.fillStyle = p.color;
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
     ctx.fill();
+
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 4;
     ctx.stroke();
+    ctx.restore();
 
+    // Oyuncu İsmi
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold ' + Math.max(13, p.r / 2.5) + 'px Segoe UI';
     ctx.textAlign = 'center';
@@ -324,5 +330,5 @@ setInterval(() => {
 
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
-  console.log('Sigmally zoom ozellikli sunucu calisiyor: ' + PORT);
+  console.log('Sigmally skin ozellikli sunucu calisiyor: ' + PORT);
 });
