@@ -69,6 +69,7 @@ let viruses = [];
 let mapSize = 3000;
 let mouseX = 0, mouseY = 0;
 let playing = false;
+let currentZoom = 1;
 
 function startGame() {
   const name = document.getElementById('nick').value || 'Oyuncu';
@@ -104,8 +105,8 @@ function startGame() {
 }
 
 window.addEventListener('mousemove', (e) => {
-  mouseX = e.clientX - canvas.width / 2;
-  mouseY = e.clientY - canvas.height / 2;
+  mouseX = (e.clientX - canvas.width / 2) / currentZoom;
+  mouseY = (e.clientY - canvas.height / 2) / currentZoom;
 });
 
 window.addEventListener('keydown', (e) => {
@@ -141,8 +142,14 @@ function draw() {
   const camX = me ? me.x : mapSize / 2;
   const camY = me ? me.y : mapSize / 2;
 
+  // Kamera Zoom Hesaplama (Hücre büyüdükçe zoom küçülür, harita uzaklaşır)
+  let targetZoom = me ? Math.min(1, Math.max(0.3, 40 / me.r)) : 1;
+  currentZoom += (targetZoom - currentZoom) * 0.1; // Yumuşak geçiş efekti
+
   ctx.save();
-  ctx.translate(canvas.width / 2 - camX, canvas.height / 2 - camY);
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.scale(currentZoom, currentZoom);
+  ctx.translate(-camX, -camY);
 
   // Izgara (Grid)
   ctx.strokeStyle = '#151525';
@@ -254,7 +261,7 @@ wss.on('connection', (ws) => {
         players[id].dx = data.dx;
         players[id].dy = data.dy;
       } else if (data.type === 'split' && players[id] && players[id].r > 35) {
-        players[id].r *= 0.75; // Bölünme etkisi
+        players[id].r *= 0.75;
       } else if (data.type === 'eject' && players[id] && players[id].r > 28) {
         players[id].r -= 1;
         foods.push({
@@ -285,7 +292,6 @@ setInterval(() => {
     p.x = Math.max(p.r, Math.min(MAP_SIZE - p.r, p.x));
     p.y = Math.max(p.r, Math.min(MAP_SIZE - p.r, p.y));
 
-    // Yem yeme
     for (let i = foods.length - 1; i >= 0; i--) {
       if (Math.hypot(p.x - foods[i].x, p.y - foods[i].y) < p.r) {
         p.r += 0.4;
@@ -297,7 +303,6 @@ setInterval(() => {
       }
     }
 
-    // Oyuncu yeme
     playerIds.forEach(otherId => {
       if (id !== otherId && players[otherId]) {
         const other = players[otherId];
@@ -319,5 +324,5 @@ setInterval(() => {
 
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
-  console.log('Sigmally sunucusu calisiyor: ' + PORT);
+  console.log('Sigmally zoom ozellikli sunucu calisiyor: ' + PORT);
 });
