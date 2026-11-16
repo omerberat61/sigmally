@@ -2,123 +2,118 @@ const http = require('http');
 const WebSocket = require('ws');
 
 const htmlPage = `<!DOCTYPE html>
-<html lang="tr" style="--sigmod-theme-background: linear-gradient(135deg, #090713 0%, #211442 38%, #4b2371 72%, #72418e 100%); --sigmod-theme-text: #FFFFFF; --sigmod-theme-surface: rgba(0, 0, 0, 0.45); --sigmod-theme-surface-strong: rgba(18, 18, 30, 0.95); --sigmod-theme-border: rgba(255, 255, 255, 0.15); --sigmod-shop-card-border: #4ab3ff;">
+<html lang="tr" style="--sigmod-theme-background: linear-gradient(135deg, #090713 0%, #211442 38%, #4b2371 72%, #72418e 100%); --sigmod-theme-text: #FFFFFF;">
 <head>
 <meta charset="UTF-8">
-<title>Sigmally - SigMod v11.0.1 by Cursed</title>
+<title>Sigmally - SigMod v11.0.1</title>
 <style>
   body { 
     margin: 0; overflow: hidden; 
     background: var(--sigmod-theme-background, #0b0b14); 
-    font-family: 'Segoe UI', Arial, sans-serif; 
-    color: var(--sigmod-theme-text, #ffffff); 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    color: #fff; 
   }
   canvas { display: block; }
-  
-  /* Üst SigMod Bar */
+
+  /* SigMod Üst Bilgi Barı */
   #sigmod-bar {
     position: absolute; top: 0; left: 0; width: 100%; height: 35px;
-    background: rgba(0, 0, 0, 0.7); border-bottom: 1px solid var(--sigmod-theme-border);
+    background: rgba(0, 0, 0, 0.75); border-bottom: 1px solid rgba(255,255,255,0.1);
     display: flex; align-items: center; justify-content: space-between; padding: 0 15px;
-    box-sizing: border-box; font-size: 13px; z-index: 20;
+    box-sizing: border-box; font-size: 12px; z-index: 20; color: #ccc;
   }
-  #sigmod-bar span { color: #c77dff; font-weight: bold; }
+  #sigmod-bar b { color: #c77dff; }
 
-  /* Ana Menü */
-  #menu {
-    position: absolute; top: 52%; left: 50%; transform: translate(-50%, -50%);
-    background: var(--sigmod-theme-surface-strong); 
-    padding: 25px; border-radius: 16px;
-    box-shadow: 0 0 40px rgba(138, 43, 226, 0.5); 
-    border: 1px solid var(--sigmod-theme-border);
-    width: 380px; z-index: 10;
+  /* Ana Arayüz / Menü Konteynerİ */
+  #menu-container {
+    position: absolute; top: 35px; left: 0; width: 100%; height: calc(100vh - 35px);
+    display: flex; justify-content: center; align-items: center; z-index: 10;
   }
-  .menu-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-  h2 { color: #b19cd9; margin: 0; font-size: 22px; letter-spacing: 1px; }
-  .sigmod-badge {
-    background: linear-gradient(135deg, #7b2cbf, #9d4edd); color: #fff;
-    font-size: 10px; padding: 3px 8px; border-radius: 4px; font-weight: bold;
+
+  /* Sol Menü Kutusu (Sigmally Paneli) */
+  .sig-panel {
+    background: rgba(18, 18, 30, 0.92); border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px; padding: 20px; width: 300px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    box-sizing: border-box; text-align: center;
+  }
+  .logo-area { font-size: 24px; font-weight: bold; color: #b19cd9; margin-bottom: 5px; }
+  .mod-sub { font-size: 10px; color: #aaa; margin-bottom: 15px; }
+
+  /* Profil / Avatar Alanı */
+  .profile-box {
+    background: rgba(0,0,0,0.4); border-radius: 8px; padding: 10px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px; border: 1px solid rgba(255,255,255,0.08);
+  }
+  .avatar { width: 45px; height: 45px; background: #7b2cbf; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; border: 2px solid #fff; }
+  .profile-info { text-align: left; font-size: 13px; }
+  .profile-info b { color: #ffea00; }
+
+  /* İnput ve Seçiciler */
+  input, select {
+    width: 100%; padding: 11px; margin-bottom: 10px; background: #181828; border: 1px solid #443366;
+    color: #fff; border-radius: 6px; box-sizing: border-box; text-align: center; font-size: 14px; outline: none;
   }
   
-  /* Sekmeler (Genel / Grup vb.) */
-  .tabs { display: flex; gap: 5px; margin-bottom: 12px; }
-  .tab-btn {
-    flex: 1; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid var(--sigmod-theme-border);
-    color: #fff; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; text-align: center;
+  /* Butonlar */
+  .btn-play {
+    background: #00b0ff; color: #fff; font-weight: bold; padding: 12px; border: none;
+    border-radius: 6px; width: 100%; cursor: pointer; font-size: 16px; box-shadow: 0 4px 15px rgba(0,176,255,0.4);
+    margin-bottom: 8px; transition: 0.2s;
   }
-  .tab-btn.active { background: #7b2cbf; border-color: #9d4edd; }
-
-  input {
-    padding: 12px; font-size: 15px; border-radius: 8px; border: 1px solid #443366;
-    outline: none; width: 100%; box-sizing: border-box; text-align: center; margin-bottom: 10px; 
-    background: var(--sigmod-theme-surface); color: #fff;
-  }
+  .btn-play:hover { background: #0091ea; }
   
-  .btn-main {
-    padding: 12px; font-size: 16px; font-weight: bold; background: linear-gradient(135deg, #2ec4b6, #25a18e);
-    color: #fff; border: none; border-radius: 8px; cursor: pointer; width: 100%;
-    box-shadow: 0 4px 15px rgba(46, 196, 182, 0.4); margin-bottom: 8px; transition: 0.2s;
+  .btn-login {
+    background: #7b2cbf; color: #fff; font-weight: bold; padding: 10px; border: none;
+    border-radius: 6px; width: 100%; cursor: pointer; font-size: 14px; margin-bottom: 8px;
   }
-  .btn-main:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-login:hover { background: #6a1b9a; }
 
-  /* SigMod Ayar Paneli */
-  #sigmod-settings-panel {
-    background: rgba(0,0,0,0.3); border: 1px solid var(--sigmod-theme-border);
-    border-radius: 8px; padding: 10px; margin-top: 10px; font-size: 12px;
-  }
-  .setting-row { display: flex; justify-content: space-between; align-items: center; margin: 6px 0; }
-  .setting-row input[type="checkbox"] { width: auto; margin: 0; cursor: pointer; }
-
-  #hud {
-    position: absolute; bottom: 20px; left: 20px; background: var(--sigmod-theme-surface-strong);
-    padding: 12px 20px; border-radius: 10px; font-size: 18px; font-weight: bold; 
-    border: 1px solid var(--sigmod-theme-border); display: none; z-index: 10;
-  }
+  /* Sağ Üst Liderlik Tablosu */
   #leaderboard {
-    position: absolute; top: 50px; right: 20px; background: var(--sigmod-theme-surface-strong);
-    padding: 15px; border-radius: 10px; min-width: 180px; 
-    border: 1px solid var(--sigmod-theme-border); display: none; z-index: 10;
+    position: absolute; top: 50px; right: 20px; background: rgba(18, 18, 30, 0.85);
+    padding: 12px; border-radius: 10px; min-width: 180px; border: 1px solid rgba(255,255,255,0.1);
+    font-size: 13px; display: none; z-index: 10;
   }
-  #leaderboard b { color: #c77dff; display: block; margin-bottom: 8px; text-align: center; }
+  #leaderboard b { color: #c77dff; display: block; margin-bottom: 6px; text-align: center; }
+
+  /* Sol Alt Skor Göstergesi */
+  #hud {
+    position: absolute; bottom: 20px; left: 20px; background: rgba(18, 18, 30, 0.85);
+    padding: 10px 18px; border-radius: 8px; font-size: 16px; font-weight: bold; 
+    border: 1px solid rgba(255,255,255,0.1); display: none; z-index: 10;
+  }
 </style>
 </head>
 <body>
 
+<!-- Üst SigMod Bar -->
 <div id="sigmod-bar">
-  <div><b>SigMod v11.0.1</b> by Cursed | <span style="color:#00e676">Aktif</span></div>
+  <div><b>SigMod v11.0.1</b> by Cursed | Sigmally Fixes 2.8.12</div>
   <div>Omerixxs Özel Sunucu</div>
 </div>
 
-<div id="menu">
-  <div class="menu-header">
-    <h2>Sigmally</h2>
-    <span class="sigmod-badge">SigMod v11.0.1</span>
-  </div>
+<!-- Ana Menü Konteynerı -->
+<div id="menu-container">
+  <div class="sig-panel">
+    <div class="logo-area">Sigmally</div>
+    <div class="mod-sub">SigMod v11.0.1 Aktif</div>
 
-  <div class="tabs">
-    <div class="tab-btn active">Genel</div>
-    <div class="tab-btn" onclick="alert('Grup sistemi aktif!')">Grup</div>
-  </div>
+    <div class="profile-box">
+      <div class="avatar">O</div>
+      <div class="profile-info">
+        <div><b>omerixxs</b></div>
+        <div style="font-size: 11px; color: #aaa;">Seviye: 52 (Altın: 52055)</div>
+      </div>
+    </div>
 
-  <input type="text" id="nick" placeholder="Oyuncu Adın..." maxlength="15" value="Omerixxs">
-  
-  <button class="btn-main" onclick="startGame()">Oynamak</button>
-  
-  <!-- SigMod Gelişmiş Ayarlar Paneli -->
-  <div id="sigmod-settings-panel">
-    <b>SigMod Mod Ayarları</b>
-    <div class="setting-row">
-      <label>Oto-Besleme (Macro W)</label>
-      <input type="checkbox" id="opt-macro">
-    </div>
-    <div class="setting-row">
-      <label>Renk Efektleri (Glow)</label>
-      <input type="checkbox" id="opt-glow" checked>
-    </div>
-    <div class="setting-row">
-      <label>Gelişmiş Kamera Zoom</label>
-      <input type="checkbox" id="opt-zoom" checked>
-    </div>
+    <input type="text" id="nick" placeholder="Oyuncu Adı..." maxlength="15" value="Omerixxs">
+    
+    <select id="server-select">
+      <option>Europe-1 (Özel Sunucu)</option>
+    </select>
+
+    <button class="btn-play" onclick="startGame()">Oynamak</button>
+    <button class="btn-login" onclick="alert('Giriş sistemi aktif!')">Giriş Yap</button>
   </div>
 </div>
 
@@ -144,7 +139,6 @@ let mapSize = 3000;
 let mouseX = 0, mouseY = 0;
 let playing = false;
 let currentZoom = 1;
-let macroInterval = null;
 
 function startGame() {
   const name = document.getElementById('nick').value || 'Oyuncu';
@@ -152,7 +146,7 @@ function startGame() {
   
   ws.onopen = () => {
     ws.send(JSON.stringify({ type: 'join', name: name }));
-    document.getElementById('menu').style.display = 'none';
+    document.getElementById('menu-container').style.display = 'none';
     document.getElementById('sigmod-bar').style.display = 'none';
     document.getElementById('hud').style.display = 'block';
     document.getElementById('leaderboard').style.display = 'block';
@@ -174,11 +168,10 @@ function startGame() {
 
   ws.onclose = () => {
     playing = false;
-    document.getElementById('menu').style.display = 'block';
+    document.getElementById('menu-container').style.display = 'flex';
     document.getElementById('sigmod-bar').style.display = 'flex';
     document.getElementById('hud').style.display = 'none';
     document.getElementById('leaderboard').style.display = 'none';
-    if (macroInterval) clearInterval(macroInterval);
   };
 }
 
@@ -195,23 +188,6 @@ window.addEventListener('keydown', (e) => {
     ws.send(JSON.stringify({ type: 'eject' }));
   }
 });
-
-// SigMod Macro W (Basılı tutunca seri yem atma)
-window.addEventListener('mousedown', (e) => {
-  if (!playing || !ws || ws.readyState !== WebSocket.OPEN) return;
-  if (e.button === 2 && document.getElementById('opt-macro').checked) { // Sağ tık macro
-    macroInterval = setInterval(() => {
-      ws.send(JSON.stringify({ type: 'eject' }));
-    }, 50);
-  }
-});
-window.addEventListener('mouseup', (e) => {
-  if (e.button === 2 && macroInterval) {
-    clearInterval(macroInterval);
-    macroInterval = null;
-  }
-});
-window.addEventListener('contextmenu', e => e.preventDefault()); // Sağ tık menüsünü kapat
 
 setInterval(() => {
   if (playing && ws && ws.readyState === WebSocket.OPEN) {
@@ -237,8 +213,7 @@ function draw() {
   const camX = me ? me.x : mapSize / 2;
   const camY = me ? me.y : mapSize / 2;
 
-  let useZoom = document.getElementById('opt-zoom').checked;
-  let targetZoom = (useZoom && me) ? Math.min(1, Math.max(0.3, 40 / me.r)) : 1;
+  let targetZoom = me ? Math.min(1, Math.max(0.3, 40 / me.r)) : 1;
   currentZoom += (targetZoom - currentZoom) * 0.1;
 
   ctx.save();
@@ -276,14 +251,10 @@ function draw() {
     ctx.stroke();
   });
 
-  let useGlow = document.getElementById('opt-glow').checked;
-
   Object.values(players).forEach(p => {
     ctx.save();
-    if (useGlow) {
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = p.color;
-    }
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = p.color;
 
     ctx.fillStyle = p.color;
     ctx.beginPath();
@@ -424,5 +395,5 @@ setInterval(() => {
 
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
-  console.log('Tam donanimli SigMod sunucusu calisiyor: ' + PORT);
+  console.log('Orijinal Sigmally Tasarımlı Sunucu Çalışıyor: ' + PORT);
 });
