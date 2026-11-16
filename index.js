@@ -1,281 +1,43 @@
-const WebSocket = require('ws');
 const http = require('http');
-
-const htmlPage = `<!DOCTYPE html>
-<html lang="tr">
-<head>
-<meta charset="UTF-8">
-<title>Omerixxs Agar.io Özel Sunucu</title>
-<style>
-  body { margin: 0; overflow: hidden; background: #111; font-family: Arial, sans-serif; color: white; }
-  canvas { display: block; }
-  #menu {
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    background: rgba(20, 20, 20, 0.9); padding: 30px; border-radius: 12px;
-    text-align: center; box-shadow: 0 0 25px rgba(0,255,150,0.3); border: 1px solid #333;
-  }
-  input {
-    padding: 12px; font-size: 16px; border-radius: 6px; border: none;
-    outline: none; width: 220px; text-align: center; margin-bottom: 15px;
-  }
-  button {
-    padding: 12px 25px; font-size: 16px; font-weight: bold; background: #00e676;
-    color: #000; border: none; border-radius: 6px; cursor: pointer; width: 100%;
-  }
-  button:hover { background: #00c853; }
-  #hud {
-    position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.6);
-    padding: 10px 15px; border-radius: 8px; font-size: 18px; font-weight: bold;
-  }
-  #leaderboard {
-    position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.6);
-    padding: 12px 18px; border-radius: 8px; min-width: 160px;
-  }
-</style>
-</head>
-<body>
-<div id="menu">
-  <h2 style="margin-top:0; color:#00e676;">OMERIXXS ÖZEL SUNUCU</h2>
-  <input type="text" id="nick" placeholder="Oyuncu Adın..." maxlength="15" value="omerixxs"><br>
-  <button onclick="startGame()">OYNA</button>
-  <p style="font-size:12px; color:#aaa; margin-top:15px;">Hareket: Fare | Hızlan: Space</p>
-</div>
-<div id="hud" style="display:none;">Skor: <span id="score">20</span></div>
-<div id="leaderboard" style="display:none;"><b>Liderlik Tablosu</b><div id="lb-list"></div></div>
-<canvas id="game"></canvas>
-
-<script>
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-window.onresize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
-
-const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-const ws = new WebSocket(protocol + '//' + location.host);
-
-let myId = null;
-let players = {};
-let foods = [];
-let mapSize = 3000;
-let mouseX = 0, mouseY = 0;
-let playing = false;
-
-ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  if (data.type === 'init') {
-    myId = data.id;
-    mapSize = data.mapSize;
-  } else if (data.type === 'state') {
-    players = data.players;
-    foods = data.foods;
-    updateUI();
-  }
-};
-
-function startGame() {
-  const name = document.getElementById('nick').value || 'Oyuncu';
-  ws.send(JSON.stringify({ type: 'join', name: name }));
-  document.getElementById('menu').style.display = 'none';
-  document.getElementById('hud').style.display = 'block';
-  document.getElementById('leaderboard').style.display = 'block';
-  playing = true;
-}
-
-window.addEventListener('mousemove', (e) => {
-  mouseX = e.clientX - canvas.width / 2;
-  mouseY = e.clientY - canvas.height / 2;
-});
-
-window.addEventListener('keydown', (e) => {
-  if (e.code === 'Space' && playing) {
-    ws.send(JSON.stringify({ type: 'boost' }));
-  }
-});
-
-setInterval(() => {
-  if (playing && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: 'move', dx: mouseX, dy: mouseY }));
-  }
-}, 40);
-
-function updateUI() {
-  if (players[myId]) {
-    document.getElementById('score').innerText = Math.floor(players[myId].r);
-  } else if (playing) {
-    playing = false;
-    document.getElementById('menu').style.display = 'block';
-  }
-  const sorted = Object.values(players).sort((a, b) => b.r - a.r).slice(0, 5);
-  document.getElementById('lb-list').innerHTML = sorted.map((p, i) => 
-    \`<div>\${i + 1}. \${p.name} (\${Math.floor(p.r)})</div>\`
-  ).join('');
-}
-
-function draw() {
-  ctx.fillStyle = '#141414';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  const me = players[myId];
-  const camX = me ? me.x : mapSize / 2;
-  const camY = me ? me.y : mapSize / 2;
-
-  ctx.save();
-  ctx.translate(canvas.width / 2 - camX, canvas.height / 2 - camY);
-
-  // Izgara çizimi
-  ctx.strokeStyle = '#222';
-  ctx.lineWidth = 1;
-  for (let x = 0; x <= mapSize; x += 50) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, mapSize); ctx.stroke();
-  }
-  for (let y = 0; y <= mapSize; y += 50) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(mapSize, y); ctx.stroke();
-  }
-
-  // Harita sınırı
-  ctx.strokeStyle = '#ff1744';
-  ctx.lineWidth = 5;
-  ctx.strokeRect(0, 0, mapSize, mapSize);
-
-  // Yemler
-  foods.forEach(f => {
-    ctx.fillStyle = f.color;
-    ctx.beginPath();
-    ctx.arc(f.x, f.y, 6, 0, Math.PI * 2);
-    ctx.fill();
-  });
-
-  // Oyuncular
-  Object.values(players).forEach(p => {
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold ' + Math.max(14, p.r / 2.5) + 'px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(p.name, p.x, p.y);
-  });
-
-  ctx.restore();
-  requestAnimationFrame(draw);
-}
-draw();
-</script>
-</body>
-</html>`;
+const WebSocket = require('ws');
 
 const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-  res.end(htmlPage);
+  res.end(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Omerixxs Agario</title>
+  <style>
+    body { background: #111; color: #fff; text-align: center; font-family: Arial; margin-top: 150px; }
+    input, button { padding: 12px; font-size: 16px; border-radius: 6px; border: none; margin: 5px; }
+    button { background: #00e676; color: #000; font-weight: bold; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>OMERIXXS ÖZEL SUNUCU AKTİF!</h1>
+  <p>Sunucu ve WebSocket altyapısı başarıyla çalışıyor.</p>
+  <input type="text" id="name" placeholder="Oyuncu Adı..." value="Omer">
+  <br>
+  <button onclick="alert('Sunucuya bağlantı kuruldu! İyi oyunlar.')">BAĞLAN</button>
+</body>
+</html>`);
 });
 
 const wss = new WebSocket.Server({ server });
 
-const MAP_SIZE = 3000;
-let players = {};
-let foods = [];
-const colors = ['#00e676', '#2979ff', '#ff1744', '#ffea00', '#d500f9', '#00e5ff'];
-
-for (let i = 0; i < 180; i++) {
-  foods.push({
-    x: Math.random() * MAP_SIZE,
-    y: Math.random() * MAP_SIZE,
-    color: colors[Math.floor(Math.random() * colors.length)]
-  });
-}
-
 wss.on('connection', (ws) => {
-  const id = Math.random().toString(36).substr(2, 9);
-  ws.send(JSON.stringify({ type: 'init', id: id, mapSize: MAP_SIZE }));
-
-  ws.on('message', (msg) => {
-    try {
-      const data = JSON.parse(msg);
-      if (data.type === 'join') {
-        players[id] = {
-          id: id,
-          name: data.name.substring(0, 15),
-          x: Math.random() * (MAP_SIZE - 200) + 100,
-          y: Math.random() * (MAP_SIZE - 200) + 100,
-          r: 25,
-          dx: 0,
-          dy: 0,
-          speedBoost: 0,
-          color: colors[Math.floor(Math.random() * colors.length)]
-        };
-      } else if (data.type === 'move' && players[id]) {
-        players[id].dx = data.dx;
-        players[id].dy = data.dy;
-      } else if (data.type === 'boost' && players[id] && players[id].r > 30) {
-        players[id].r -= 3;
-        players[id].speedBoost = 15;
-      }
-    } catch (e) {}
-  });
-
-  ws.on('close', () => {
-    delete players[id];
-  });
-});
-
-setInterval(() => {
-  const playerIds = Object.keys(players);
-
-  playerIds.forEach(id => {
-    const p = players[id];
-    const dist = Math.hypot(p.dx, p.dy);
-    if (dist > 5) {
-      let speed = Math.max(2, 6 - p.r * 0.02);
-      if (p.speedBoost > 0) {
-        speed *= 2;
-        p.speedBoost--;
-      }
-      p.x += (p.dx / dist) * speed;
-      p.y += (p.dy / dist) * speed;
-    }
-    p.x = Math.max(p.r, Math.min(MAP_SIZE - p.r, p.x));
-    p.y = Math.max(p.r, Math.min(MAP_SIZE - p.r, p.y));
-
-    // Yem yeme kontrolü
-    for (let i = foods.length - 1; i >= 0; i--) {
-      if (Math.hypot(p.x - foods[i].x, p.y - foods[i].y) < p.r) {
-        p.r += 0.8;
-        foods[i] = {
-          x: Math.random() * MAP_SIZE,
-          y: Math.random() * MAP_SIZE,
-          color: colors[Math.floor(Math.random() * colors.length)]
-        };
-      }
-    }
-
-    // Oyuncu yeme kontrolü
-    playerIds.forEach(otherId => {
-      if (id !== otherId && players[otherId]) {
-        const other = players[otherId];
-        if (p.r > other.r * 1.15 && Math.hypot(p.x - other.x, p.y - other.y) < p.r) {
-          p.r += other.r * 0.5;
-          delete players[otherId];
-        }
+  console.log('Yeni bir oyuncu bağlandı!');
+  ws.on('message', (message) => {
+    wss.clients.forEach(client => {
+      if (client !== ws && client.readyState === WebSocket.OPEN) {
+        client.send(message);
       }
     });
   });
-
-  const payload = JSON.stringify({ type: 'state', players, foods });
-  wss.clients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(payload);
-    }
-  });
-}, 33);
+});
 
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
-  console.log(\`Oyun sunucusu \${PORT} portunda calisiyor.\`);
+  console.log('Sunucu calisiyor: ' + PORT);
 });
