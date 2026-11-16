@@ -2,69 +2,84 @@ const http = require('http');
 const WebSocket = require('ws');
 
 const htmlPage = `<!DOCTYPE html>
-<html lang="tr" style="--sigmod-theme-background: linear-gradient(135deg, #090713 0%, #211442 38%, #4b2371 72%, #72418e 100%); --sigmod-theme-text: #FFFFFF; --sigmod-theme-surface: rgba(0, 0, 0, 0.38); --sigmod-theme-surface-strong: rgba(0, 0, 0, 0.58); --sigmod-theme-border: rgba(255, 255, 255, 0.15); --sigmod-shop-card-border: #4ab3ff;">
+<html lang="tr" style="--sigmod-theme-background: linear-gradient(135deg, #090713 0%, #211442 38%, #4b2371 72%, #72418e 100%); --sigmod-theme-text: #FFFFFF; --sigmod-theme-surface: rgba(0, 0, 0, 0.45); --sigmod-theme-surface-strong: rgba(18, 18, 30, 0.95); --sigmod-theme-border: rgba(255, 255, 255, 0.15); --sigmod-shop-card-border: #4ab3ff;">
 <head>
 <meta charset="UTF-8">
-<title>Sigmally - SigMod v11.0.1 Özel Sunucu</title>
+<title>Sigmally - SigMod v11.0.1 by Cursed</title>
 <style>
   body { 
-    margin: 0; 
-    overflow: hidden; 
+    margin: 0; overflow: hidden; 
     background: var(--sigmod-theme-background, #0b0b14); 
     font-family: 'Segoe UI', Arial, sans-serif; 
     color: var(--sigmod-theme-text, #ffffff); 
   }
   canvas { display: block; }
   
-  /* SigMod Üst Bilgi Barı */
+  /* Üst SigMod Bar */
   #sigmod-bar {
     position: absolute; top: 0; left: 0; width: 100%; height: 35px;
-    background: rgba(0, 0, 0, 0.6); border-bottom: 1px solid var(--sigmod-theme-border);
+    background: rgba(0, 0, 0, 0.7); border-bottom: 1px solid var(--sigmod-theme-border);
     display: flex; align-items: center; justify-content: space-between; padding: 0 15px;
-    box-sizing: border-box; font-size: 13px; z-index: 10;
+    box-sizing: border-box; font-size: 13px; z-index: 20;
   }
   #sigmod-bar span { color: #c77dff; font-weight: bold; }
 
+  /* Ana Menü */
   #menu {
     position: absolute; top: 52%; left: 50%; transform: translate(-50%, -50%);
-    background: var(--sigmod-theme-surface-strong, rgba(18, 18, 30, 0.95)); 
-    padding: 30px; border-radius: 16px;
-    text-align: center; box-shadow: 0 0 35px rgba(138, 43, 226, 0.5); 
-    border: 1px solid var(--sigmod-theme-border, #332255);
-    width: 340px;
+    background: var(--sigmod-theme-surface-strong); 
+    padding: 25px; border-radius: 16px;
+    box-shadow: 0 0 40px rgba(138, 43, 226, 0.5); 
+    border: 1px solid var(--sigmod-theme-border);
+    width: 380px; z-index: 10;
   }
-  h2 { color: #b19cd9; margin-top: 0; letter-spacing: 1px; font-size: 24px; }
+  .menu-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+  h2 { color: #b19cd9; margin: 0; font-size: 22px; letter-spacing: 1px; }
   .sigmod-badge {
     background: linear-gradient(135deg, #7b2cbf, #9d4edd); color: #fff;
-    font-size: 11px; padding: 3px 8px; border-radius: 4px; display: inline-block; margin-bottom: 10px;
+    font-size: 10px; padding: 3px 8px; border-radius: 4px; font-weight: bold;
   }
-  input {
-    padding: 14px; font-size: 16px; border-radius: 8px; border: 1px solid var(--sigmod-theme-border, #443366);
-    outline: none; width: 100%; box-sizing: border-box; text-align: center; margin-bottom: 12px; 
-    background: var(--sigmod-theme-surface, #181828); color: var(--sigmod-theme-text, #fff);
-  }
-  button {
-    padding: 14px; font-size: 16px; font-weight: bold; background: linear-gradient(135deg, #00b4d8, #0077b6);
-    color: #fff; border: none; border-radius: 8px; cursor: pointer; width: 100%;
-    box-shadow: 0 4px 15px rgba(0, 180, 216, 0.4); transition: 0.2s; margin-bottom: 8px;
-  }
-  button:hover { background: linear-gradient(135deg, #0096c7, #03045e); transform: translateY(-1px); }
   
-  .btn-play { background: linear-gradient(135deg, #2ec4b6, #25a18e) !important; box-shadow: 0 4px 15px rgba(46, 196, 182, 0.4) !important; }
-  .btn-play:hover { background: linear-gradient(135deg, #25a18e, #1f7a6c) !important; }
+  /* Sekmeler (Genel / Grup vb.) */
+  .tabs { display: flex; gap: 5px; margin-bottom: 12px; }
+  .tab-btn {
+    flex: 1; padding: 8px; background: rgba(255,255,255,0.05); border: 1px solid var(--sigmod-theme-border);
+    color: #fff; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; text-align: center;
+  }
+  .tab-btn.active { background: #7b2cbf; border-color: #9d4edd; }
+
+  input {
+    padding: 12px; font-size: 15px; border-radius: 8px; border: 1px solid #443366;
+    outline: none; width: 100%; box-sizing: border-box; text-align: center; margin-bottom: 10px; 
+    background: var(--sigmod-theme-surface); color: #fff;
+  }
+  
+  .btn-main {
+    padding: 12px; font-size: 16px; font-weight: bold; background: linear-gradient(135deg, #2ec4b6, #25a18e);
+    color: #fff; border: none; border-radius: 8px; cursor: pointer; width: 100%;
+    box-shadow: 0 4px 15px rgba(46, 196, 182, 0.4); margin-bottom: 8px; transition: 0.2s;
+  }
+  .btn-main:hover { opacity: 0.9; transform: translateY(-1px); }
+
+  /* SigMod Ayar Paneli */
+  #sigmod-settings-panel {
+    background: rgba(0,0,0,0.3); border: 1px solid var(--sigmod-theme-border);
+    border-radius: 8px; padding: 10px; margin-top: 10px; font-size: 12px;
+  }
+  .setting-row { display: flex; justify-content: space-between; align-items: center; margin: 6px 0; }
+  .setting-row input[type="checkbox"] { width: auto; margin: 0; cursor: pointer; }
 
   #hud {
-    position: absolute; bottom: 20px; left: 20px; background: var(--sigmod-theme-surface, rgba(18, 18, 30, 0.8));
+    position: absolute; bottom: 20px; left: 20px; background: var(--sigmod-theme-surface-strong);
     padding: 12px 20px; border-radius: 10px; font-size: 18px; font-weight: bold; 
-    border: 1px solid var(--sigmod-theme-border, #332255); display: none;
+    border: 1px solid var(--sigmod-theme-border); display: none; z-index: 10;
   }
   #leaderboard {
-    position: absolute; top: 50px; right: 20px; background: var(--sigmod-theme-surface, rgba(18, 18, 30, 0.8));
+    position: absolute; top: 50px; right: 20px; background: var(--sigmod-theme-surface-strong);
     padding: 15px; border-radius: 10px; min-width: 180px; 
-    border: 1px solid var(--sigmod-theme-border, #332255); display: none;
+    border: 1px solid var(--sigmod-theme-border); display: none; z-index: 10;
   }
   #leaderboard b { color: #c77dff; display: block; margin-bottom: 8px; text-align: center; }
-  .controls-info { font-size: 11px; color: #aaa; margin-top: 10px; line-height: 1.4; }
 </style>
 </head>
 <body>
@@ -75,13 +90,35 @@ const htmlPage = `<!DOCTYPE html>
 </div>
 
 <div id="menu">
-  <div class="sigmod-badge">SIGMOD MODED VERSION</div>
-  <h2>Sigmally</h2>
+  <div class="menu-header">
+    <h2>Sigmally</h2>
+    <span class="sigmod-badge">SigMod v11.0.1</span>
+  </div>
+
+  <div class="tabs">
+    <div class="tab-btn active">Genel</div>
+    <div class="tab-btn" onclick="alert('Grup sistemi aktif!')">Grup</div>
+  </div>
+
   <input type="text" id="nick" placeholder="Oyuncu Adın..." maxlength="15" value="Omerixxs">
-  <button class="btn-play" onclick="startGame()">Oynamak</button>
-  <button onclick="alert('SigMod Ayarları Aktif!')">SigMod Ayarları</button>
-  <div class="controls-info">
-    <b>Kontroller:</b> Hareket: Fare | Bölünme: Boşluk (Space) | Yem: W
+  
+  <button class="btn-main" onclick="startGame()">Oynamak</button>
+  
+  <!-- SigMod Gelişmiş Ayarlar Paneli -->
+  <div id="sigmod-settings-panel">
+    <b>SigMod Mod Ayarları</b>
+    <div class="setting-row">
+      <label>Oto-Besleme (Macro W)</label>
+      <input type="checkbox" id="opt-macro">
+    </div>
+    <div class="setting-row">
+      <label>Renk Efektleri (Glow)</label>
+      <input type="checkbox" id="opt-glow" checked>
+    </div>
+    <div class="setting-row">
+      <label>Gelişmiş Kamera Zoom</label>
+      <input type="checkbox" id="opt-zoom" checked>
+    </div>
   </div>
 </div>
 
@@ -107,6 +144,7 @@ let mapSize = 3000;
 let mouseX = 0, mouseY = 0;
 let playing = false;
 let currentZoom = 1;
+let macroInterval = null;
 
 function startGame() {
   const name = document.getElementById('nick').value || 'Oyuncu';
@@ -140,6 +178,7 @@ function startGame() {
     document.getElementById('sigmod-bar').style.display = 'flex';
     document.getElementById('hud').style.display = 'none';
     document.getElementById('leaderboard').style.display = 'none';
+    if (macroInterval) clearInterval(macroInterval);
   };
 }
 
@@ -156,6 +195,23 @@ window.addEventListener('keydown', (e) => {
     ws.send(JSON.stringify({ type: 'eject' }));
   }
 });
+
+// SigMod Macro W (Basılı tutunca seri yem atma)
+window.addEventListener('mousedown', (e) => {
+  if (!playing || !ws || ws.readyState !== WebSocket.OPEN) return;
+  if (e.button === 2 && document.getElementById('opt-macro').checked) { // Sağ tık macro
+    macroInterval = setInterval(() => {
+      ws.send(JSON.stringify({ type: 'eject' }));
+    }, 50);
+  }
+});
+window.addEventListener('mouseup', (e) => {
+  if (e.button === 2 && macroInterval) {
+    clearInterval(macroInterval);
+    macroInterval = null;
+  }
+});
+window.addEventListener('contextmenu', e => e.preventDefault()); // Sağ tık menüsünü kapat
 
 setInterval(() => {
   if (playing && ws && ws.readyState === WebSocket.OPEN) {
@@ -181,7 +237,8 @@ function draw() {
   const camX = me ? me.x : mapSize / 2;
   const camY = me ? me.y : mapSize / 2;
 
-  let targetZoom = me ? Math.min(1, Math.max(0.3, 40 / me.r)) : 1;
+  let useZoom = document.getElementById('opt-zoom').checked;
+  let targetZoom = (useZoom && me) ? Math.min(1, Math.max(0.3, 40 / me.r)) : 1;
   currentZoom += (targetZoom - currentZoom) * 0.1;
 
   ctx.save();
@@ -219,10 +276,14 @@ function draw() {
     ctx.stroke();
   });
 
+  let useGlow = document.getElementById('opt-glow').checked;
+
   Object.values(players).forEach(p => {
     ctx.save();
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = p.color;
+    if (useGlow) {
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = p.color;
+    }
 
     ctx.fillStyle = p.color;
     ctx.beginPath();
@@ -363,5 +424,5 @@ setInterval(() => {
 
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
-  console.log('SigMod entegreli sunucu calisiyor: ' + PORT);
+  console.log('Tam donanimli SigMod sunucusu calisiyor: ' + PORT);
 });
