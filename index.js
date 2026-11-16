@@ -8,15 +8,13 @@ const server = http.createServer((req, res) => {
 
 const wss = new WebSocket.Server({ server });
 
-// Oyun odaları ve oyuncu listesi
-Clients = [];
+let Clients = [];
 
 wss.on('connection', (ws) => {
   console.log('Yeni bir oyuncu bağlandı!');
   Clients.push(ws);
 
   ws.on('message', (message) => {
-    // Oyuncudan gelen verileri diğer oyunculara ve sunucuya yansıtıyoruz
     Clients.forEach(client => {
       if (client !== ws && client.readyState === WebSocket.OPEN) {
         client.send(message);
