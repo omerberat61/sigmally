@@ -1,7 +1,6 @@
 const WebSocket = require('ws');
 const http = require('http');
 
-// Render'ın verdiği portu kullanan basit bir HTTP ve WebSocket sunucusu
 const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
   res.end('Sigmally / Agario Ozel Sunucusu Aktif!\n');
@@ -9,18 +8,29 @@ const server = http.createServer((req, res) => {
 
 const wss = new WebSocket.Server({ server });
 
+// Oyun odaları ve oyuncu listesi
+Clients = [];
+
 wss.on('connection', (ws) => {
   console.log('Yeni bir oyuncu bağlandı!');
-  
+  Clients.push(ws);
+
   ws.on('message', (message) => {
-    console.log('Gelen mesaj: ' + message);
-    ws.send('Sunucu yanıtı: ' + message);
+    // Oyuncudan gelen verileri diğer oyunculara ve sunucuya yansıtıyoruz
+    Clients.forEach(client => {
+      if (client !== ws && client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
   });
 
-  ws.send(JSON.stringify({ type: 'welcome', message: 'Sunucuya hos geldin kanka!' }));
+  ws.on('close', () => {
+    console.log('Bir oyuncu ayrıldı.');
+    Clients = Clients.filter(client => client !== ws);
+  });
 });
 
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
-  console.log(`Sunucu ${PORT} portunda calisiyor.`);
+  console.log(`Oyun sunucusu ${PORT} portunda calisiyor.`);
 });
