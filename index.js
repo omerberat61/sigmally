@@ -5,40 +5,48 @@ const htmlPage = `<!DOCTYPE html>
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Omerixxs Agar.io Özel Sunucu</title>
+<title>Sigmally - Özel Sunucu</title>
 <style>
-  body { margin: 0; overflow: hidden; background: #111; font-family: Arial, sans-serif; color: white; }
+  body { margin: 0; overflow: hidden; background: #0b0b14; font-family: 'Segoe UI', Arial, sans-serif; color: white; }
   canvas { display: block; }
   #menu {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    background: rgba(20, 20, 20, 0.95); padding: 30px; border-radius: 12px;
-    text-align: center; box-shadow: 0 0 25px rgba(0,255,150,0.3); border: 1px solid #333;
+    background: rgba(18, 18, 30, 0.95); padding: 35px; border-radius: 16px;
+    text-align: center; box-shadow: 0 0 30px rgba(138, 43, 226, 0.4); border: 1px solid #332255;
+    width: 320px;
   }
+  h2 { color: #b19cd9; margin-top: 0; letter-spacing: 1px; }
   input {
-    padding: 12px; font-size: 16px; border-radius: 6px; border: none;
-    outline: none; width: 220px; text-align: center; margin-bottom: 15px; background: #222; color: #fff;
+    padding: 14px; font-size: 16px; border-radius: 8px; border: 1px solid #443366;
+    outline: none; width: 100%; box-sizing: border-box; text-align: center; margin-bottom: 15px; background: #181828; color: #fff;
   }
   button {
-    padding: 12px 25px; font-size: 16px; font-weight: bold; background: #00e676;
-    color: #000; border: none; border-radius: 6px; cursor: pointer; width: 100%;
+    padding: 14px; font-size: 16px; font-weight: bold; background: linear-gradient(135deg, #7b2cbf, #9d4edd);
+    color: #fff; border: none; border-radius: 8px; cursor: pointer; width: 100%;
+    box-shadow: 0 4px 15px rgba(123, 44, 191, 0.4); transition: 0.2s;
   }
-  button:hover { background: #00c853; }
+  button:hover { background: linear-gradient(135deg, #9d4edd, #c77dff); transform: translateY(-1px); }
   #hud {
-    position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.6);
-    padding: 10px 15px; border-radius: 8px; font-size: 18px; font-weight: bold; display: none;
+    position: absolute; bottom: 20px; left: 20px; background: rgba(18, 18, 30, 0.8);
+    padding: 12px 20px; border-radius: 10px; font-size: 18px; font-weight: bold; border: 1px solid #332255; display: none;
   }
   #leaderboard {
-    position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.6);
-    padding: 12px 18px; border-radius: 8px; min-width: 160px; display: none;
+    position: absolute; top: 20px; right: 20px; background: rgba(18, 18, 30, 0.8);
+    padding: 15px; border-radius: 10px; min-width: 180px; border: 1px solid #332255; display: none;
   }
+  #leaderboard b { color: #c77dff; display: block; margin-bottom: 8px; text-align: center; }
+  .controls-info { font-size: 12px; color: #888; margin-top: 15px; line-height: 1.5; }
 </style>
 </head>
 <body>
 <div id="menu">
-  <h2 style="margin-top:0; color:#00e676;">OMERIXXS ÖZEL SUNUCU</h2>
-  <input type="text" id="nick" placeholder="Oyuncu Adın..." maxlength="15" value="Omer"><br>
+  <h2>SİGMALLY ÖZEL</h2>
+  <input type="text" id="nick" placeholder="Oyuncu Adın..." maxlength="15" value="Omerixxs">
   <button onclick="startGame()">OYNA</button>
-  <p style="font-size:12px; color:#aaa; margin-top:15px;">Hareket: Fare | Hızlan: Boşluk (Space)</p>
+  <div class="controls-info">
+    <b>Kontroller:</b><br>
+    Hareket: Fare | Bölünme: Boşluk (Space)<br>Yem Atma: W Tuşu
+  </div>
 </div>
 <div id="hud">Skor: <span id="score">20</span></div>
 <div id="leaderboard"><b>Liderlik Tablosu</b><div id="lb-list"></div></div>
@@ -57,13 +65,13 @@ let ws = null;
 let myId = null;
 let players = {};
 let foods = [];
+let viruses = [];
 let mapSize = 3000;
 let mouseX = 0, mouseY = 0;
 let playing = false;
 
 function startGame() {
   const name = document.getElementById('nick').value || 'Oyuncu';
-  
   ws = new WebSocket(protocol + '//' + location.host);
   
   ws.onopen = () => {
@@ -82,6 +90,7 @@ function startGame() {
     } else if (data.type === 'state') {
       players = data.players;
       foods = data.foods;
+      viruses = data.viruses || [];
       updateUI();
     }
   };
@@ -100,8 +109,11 @@ window.addEventListener('mousemove', (e) => {
 });
 
 window.addEventListener('keydown', (e) => {
-  if (e.code === 'Space' && playing && ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: 'boost' }));
+  if (!playing || !ws || ws.readyState !== WebSocket.OPEN) return;
+  if (e.code === 'Space') {
+    ws.send(JSON.stringify({ type: 'split' }));
+  } else if (e.code === 'KeyW') {
+    ws.send(JSON.stringify({ type: 'eject' }));
   }
 });
 
@@ -109,7 +121,7 @@ setInterval(() => {
   if (playing && ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ type: 'move', dx: mouseX, dy: mouseY }));
   }
-}, 40);
+}, 30);
 
 function updateUI() {
   if (players[myId]) {
@@ -117,12 +129,12 @@ function updateUI() {
   }
   const sorted = Object.values(players).sort((a, b) => b.r - a.r).slice(0, 5);
   document.getElementById('lb-list').innerHTML = sorted.map((p, i) => 
-    '<div>' + (i + 1) + '. ' + p.name + ' (' + Math.floor(p.r) + ')</div>'
+    '<div style="margin: 4px 0;">' + (i + 1) + '. ' + p.name + ' <span style="float:right; color:#b19cd9;">' + Math.floor(p.r) + '</span></div>'
   ).join('');
 }
 
 function draw() {
-  ctx.fillStyle = '#141414';
+  ctx.fillStyle = '#0b0b14';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   const me = players[myId];
@@ -132,27 +144,38 @@ function draw() {
   ctx.save();
   ctx.translate(canvas.width / 2 - camX, canvas.height / 2 - camY);
 
-  // Izgara çizimi
-  ctx.strokeStyle = '#222';
+  // Izgara (Grid)
+  ctx.strokeStyle = '#151525';
   ctx.lineWidth = 1;
-  for (let x = 0; x <= mapSize; x += 50) {
+  for (let x = 0; x <= mapSize; x += 60) {
     ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, mapSize); ctx.stroke();
   }
-  for (let y = 0; y <= mapSize; y += 50) {
+  for (let y = 0; y <= mapSize; y += 60) {
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(mapSize, y); ctx.stroke();
   }
 
-  // Harita sınırı
-  ctx.strokeStyle = '#ff1744';
-  ctx.lineWidth = 5;
+  // Harita Sınırı
+  ctx.strokeStyle = '#7b2cbf';
+  ctx.lineWidth = 6;
   ctx.strokeRect(0, 0, mapSize, mapSize);
 
   // Yemler
   foods.forEach(f => {
     ctx.fillStyle = f.color;
     ctx.beginPath();
-    ctx.arc(f.x, f.y, 6, 0, Math.PI * 2);
+    ctx.arc(f.x, f.y, 5, 0, Math.PI * 2);
     ctx.fill();
+  });
+
+  // Virüsler
+  viruses.forEach(v => {
+    ctx.fillStyle = '#38b000';
+    ctx.strokeStyle = '#007200';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(v.x, v.y, v.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
   });
 
   // Oyuncular
@@ -161,12 +184,12 @@ function draw() {
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 4;
     ctx.stroke();
 
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold ' + Math.max(14, p.r / 2.5) + 'px Arial';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold ' + Math.max(13, p.r / 2.5) + 'px Segoe UI';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(p.name, p.x, p.y);
@@ -190,13 +213,22 @@ const wss = new WebSocket.Server({ server });
 const MAP_SIZE = 3000;
 let players = {};
 let foods = [];
-const colors = ['#00e676', '#2979ff', '#ff1744', '#ffea00', '#d500f9', '#00e5ff'];
+let viruses = [];
+const colors = ['#7b2cbf', '#4cc9f0', '#f72585', '#4895ef', '#560bad', '#4361ee', '#ff0054', '#06d6a0'];
 
-for (let i = 0; i < 150; i++) {
+for (let i = 0; i < 200; i++) {
   foods.push({
     x: Math.random() * MAP_SIZE,
     y: Math.random() * MAP_SIZE,
     color: colors[Math.floor(Math.random() * colors.length)]
+  });
+}
+
+for (let i = 0; i < 10; i++) {
+  viruses.push({
+    x: Math.random() * (MAP_SIZE - 400) + 200,
+    y: Math.random() * (MAP_SIZE - 400) + 200,
+    r: 35
   });
 }
 
@@ -216,15 +248,20 @@ wss.on('connection', (ws) => {
           r: 25,
           dx: 0,
           dy: 0,
-          speedBoost: 0,
           color: colors[Math.floor(Math.random() * colors.length)]
         };
       } else if (data.type === 'move' && players[id]) {
         players[id].dx = data.dx;
         players[id].dy = data.dy;
-      } else if (data.type === 'boost' && players[id] && players[id].r > 30) {
-        players[id].r -= 2;
-        players[id].speedBoost = 12;
+      } else if (data.type === 'split' && players[id] && players[id].r > 35) {
+        players[id].r *= 0.75; // Bölünme etkisi
+      } else if (data.type === 'eject' && players[id] && players[id].r > 28) {
+        players[id].r -= 1;
+        foods.push({
+          x: players[id].x + (players[id].dx / Math.hypot(players[id].dx, players[id].dy || 1)) * (players[id].r + 15),
+          y: players[id].y + (players[id].dy / Math.hypot(players[id].dx, players[id].dy || 1)) * (players[id].r + 15),
+          color: players[id].color
+        });
       }
     } catch (e) {}
   });
@@ -241,30 +278,26 @@ setInterval(() => {
     const p = players[id];
     const dist = Math.hypot(p.dx, p.dy);
     if (dist > 5) {
-      let speed = Math.max(2, 6 - p.r * 0.02);
-      if (p.speedBoost > 0) {
-        speed *= 2;
-        p.speedBoost--;
-      }
+      let speed = Math.max(1.8, 5.5 - p.r * 0.02);
       p.x += (p.dx / dist) * speed;
       p.y += (p.dy / dist) * speed;
     }
     p.x = Math.max(p.r, Math.min(MAP_SIZE - p.r, p.x));
     p.y = Math.max(p.r, Math.min(MAP_SIZE - p.r, p.y));
 
-    // Yem yeme kontrolü
+    // Yem yeme
     for (let i = foods.length - 1; i >= 0; i--) {
       if (Math.hypot(p.x - foods[i].x, p.y - foods[i].y) < p.r) {
-        p.r += 0.5;
+        p.r += 0.4;
         foods[i] = {
           x: Math.random() * MAP_SIZE,
           y: Math.random() * MAP_SIZE,
-          color: colors[Math.floor(Math.random() * colors.name ? 0 : Math.floor(Math.random() * colors.length))]
+          color: colors[Math.floor(Math.random() * colors.length)]
         };
       }
     }
 
-    // Oyuncu yeme kontrolü
+    // Oyuncu yeme
     playerIds.forEach(otherId => {
       if (id !== otherId && players[otherId]) {
         const other = players[otherId];
@@ -276,7 +309,7 @@ setInterval(() => {
     });
   });
 
-  const payload = JSON.stringify({ type: 'state', players, foods });
+  const payload = JSON.stringify({ type: 'state', players, foods, viruses });
   wss.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(payload);
@@ -286,5 +319,5 @@ setInterval(() => {
 
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
-  console.log('Oyun sunucusu calisiyor: ' + PORT);
+  console.log('Sigmally sunucusu calisiyor: ' + PORT);
 });
