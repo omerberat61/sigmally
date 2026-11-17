@@ -1,12 +1,11 @@
 const http = require('http');
 const WebSocket = require('ws');
 
-// Orijinal Sigmally tasarımı ve game.js entegreli HTML iskeleti
 const htmlPage = `<!DOCTYPE html>
 <html lang="tr" style="--sigmod-theme-background: linear-gradient(135deg, #090713 0%, #211442 38%, #4b2371 72%, #72418e 100%); --sigmod-theme-text: #FFFFFF;">
 <head>
 <meta charset="UTF-8">
-<title>Sigmally - SigMod v11.0.1 Orijinal Sunucu</title>
+<title>Sigmally - SigMod v11.0.1 Özel Sunucu</title>
 <style>
   body { 
     margin: 0; overflow: hidden; 
@@ -31,26 +30,45 @@ const htmlPage = `<!DOCTYPE html>
     display: flex; justify-content: center; align-items: center; z-index: 10;
   }
 
+  /* Sol Menü Kutusu */
   .sig-panel {
     background: rgba(18, 18, 30, 0.92); border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 12px; padding: 20px; width: 320px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    border-radius: 12px; padding: 25px; width: 340px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     box-sizing: border-box; text-align: center;
   }
-  .logo-area { font-size: 26px; font-weight: bold; color: #b19cd9; margin-bottom: 5px; }
-  .mod-sub { font-size: 11px; color: #aaa; margin-bottom: 15px; }
+  .logo-area { font-size: 26px; font-weight: bold; color: #b19cd9; margin-bottom: 3px; }
+  .mod-sub { font-size: 11px; color: #aaa; margin-bottom: 15px; font-weight: bold; }
 
+  /* Profil Alanı */
+  .profile-box {
+    background: rgba(0,0,0,0.4); border-radius: 8px; padding: 10px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 12px; border: 1px solid rgba(255,255,255,0.08);
+  }
+  .avatar { width: 42px; height: 42px; background: #7b2cbf; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; border: 2px solid #fff; }
+  .profile-info { text-align: left; font-size: 13px; }
+  .profile-info b { color: #ffea00; }
+
+  /* İnput ve Seçiciler */
   input, select {
-    width: 100%; padding: 12px; margin-bottom: 12px; background: #181828; border: 1px solid #443366;
+    width: 100%; padding: 12px; margin-bottom: 10px; background: #181828; border: 1px solid #443366;
     color: #fff; border-radius: 6px; box-sizing: border-box; text-align: center; font-size: 14px; outline: none;
   }
   
+  /* Butonlar */
   .btn-play {
     background: linear-gradient(135deg, #2ec4b6, #25a18e); color: #fff; font-weight: bold; padding: 12px; border: none;
     border-radius: 6px; width: 100%; cursor: pointer; font-size: 16px; box-shadow: 0 4px 15px rgba(46,196,182,0.4);
     margin-bottom: 8px; transition: 0.2s;
   }
   .btn-play:hover { opacity: 0.9; }
+  
+  .btn-login {
+    background: #7b2cbf; color: #fff; font-weight: bold; padding: 10px; border: none;
+    border-radius: 6px; width: 100%; cursor: pointer; font-size: 14px;
+  }
+  .btn-login:hover { background: #6a1b9a; }
 
+  /* Sağ Üst Liderlik Tablosu */
   #leaderboard {
     position: absolute; top: 50px; right: 20px; background: rgba(18, 18, 30, 0.85);
     padding: 12px; border-radius: 10px; min-width: 180px; border: 1px solid rgba(255,255,255,0.1);
@@ -58,6 +76,7 @@ const htmlPage = `<!DOCTYPE html>
   }
   #leaderboard b { color: #c77dff; display: block; margin-bottom: 6px; text-align: center; }
 
+  /* Sol Alt Skor Göstergesi */
   #hud {
     position: absolute; bottom: 20px; left: 20px; background: rgba(18, 18, 30, 0.85);
     padding: 10px 18px; border-radius: 8px; font-size: 16px; font-weight: bold; 
@@ -67,47 +86,204 @@ const htmlPage = `<!DOCTYPE html>
 </head>
 <body>
 
+<!-- Üst SigMod Bar -->
 <div id="sigmod-bar">
-  <div><b>SigMod v11.0.1</b> by Cursed | Orijinal Motor Aktif</div>
+  <div><b>SigMod v11.0.1</b> by Cursed | Sigmally Fixes</div>
   <div>Omerixxs Özel Sunucu</div>
 </div>
 
+<!-- Ana Menü -->
 <div id="menu-container">
   <div class="sig-panel">
     <div class="logo-area">Sigmally</div>
     <div class="mod-sub">SigMod v11.0.1 Modded</div>
 
+    <div class="profile-box">
+      <div class="avatar">O</div>
+      <div class="profile-info">
+        <div><b>omerixxs</b></div>
+        <div style="font-size: 11px; color: #aaa;">Seviye: 52 (Altın: 52055)</div>
+      </div>
+    </div>
+
     <input type="text" id="nick" placeholder="Oyuncu Adı..." maxlength="15" value="Omerixxs">
     
-    <select id="gamemode">
-      <option value="localhost">Europe-1 (Özel Sunucu)</option>
+    <select id="server-select">
+      <option>Europe-1 (Özel Sunucu)</option>
     </select>
 
-    <button class="btn-play" id="play-btn" onclick="startGame()">Oynamak</button>
+    <button class="btn-play" onclick="startGame()">Oynamak</button>
+    <button class="btn-login" onclick="alert('SigMod Ayarları Aktif!')">SigMod Ayarları</button>
   </div>
 </div>
 
 <div id="hud">Skor: <span id="score">20</span></div>
 <div id="leaderboard"><b>Liderlik Tablosu</b><div id="lb-list"></div></div>
-<canvas id="canvas"></canvas>
+<canvas id="game"></canvas>
 
-<!-- Orijinal game.js dosyasını doğrudan yüklüyoruz -->
-<script src="/game.js"></script>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+window.onresize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+
+const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+let ws = null;
+
+let myId = null;
+let players = {};
+let foods = [];
+let viruses = [];
+let mapSize = 3000;
+let mouseX = 0, mouseY = 0;
+let playing = false;
+let currentZoom = 1;
+
+function startGame() {
+  const name = document.getElementById('nick').value || 'Oyuncu';
+  ws = new WebSocket(protocol + '//' + location.host);
+  
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ type: 'join', name: name }));
+    document.getElementById('menu-container').style.display = 'none';
+    document.getElementById('sigmod-bar').style.display = 'none';
+    document.getElementById('hud').style.display = 'block';
+    document.getElementById('leaderboard').style.display = 'block';
+    playing = true;
+  };
+
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === 'init') {
+      myId = data.id;
+      mapSize = data.mapSize;
+    } else if (data.type === 'state') {
+      players = data.players;
+      foods = data.foods;
+      viruses = data.viruses || [];
+      updateUI();
+    }
+  };
+
+  ws.onclose = () => {
+    playing = false;
+    document.getElementById('menu-container').style.display = 'flex';
+    document.getElementById('sigmod-bar').style.display = 'flex';
+    document.getElementById('hud').style.display = 'none';
+    document.getElementById('leaderboard').style.display = 'none';
+  };
+}
+
+window.addEventListener('mousemove', (e) => {
+  mouseX = (e.clientX - canvas.width / 2) / currentZoom;
+  mouseY = (e.clientY - canvas.height / 2) / currentZoom;
+});
+
+window.addEventListener('keydown', (e) => {
+  if (!playing || !ws || ws.readyState !== WebSocket.OPEN) return;
+  if (e.code === 'Space') {
+    ws.send(JSON.stringify({ type: 'split' }));
+  } else if (e.code === 'KeyW') {
+    ws.send(JSON.stringify({ type: 'eject' }));
+  }
+});
+
+setInterval(() => {
+  if (playing && ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'move', dx: mouseX, dy: mouseY }));
+  }
+}, 30);
+
+function updateUI() {
+  if (players[myId]) {
+    document.getElementById('score').innerText = Math.floor(players[myId].r);
+  }
+  const sorted = Object.values(players).sort((a, b) => b.r - a.r).slice(0, 5);
+  document.getElementById('lb-list').innerHTML = sorted.map((p, i) => 
+    '<div style="margin: 4px 0;">' + (i + 1) + '. ' + p.name + ' <span style="float:right; color:#b19cd9;">' + Math.floor(p.r) + '</span></div>'
+  ).join('');
+}
+
+function draw() {
+  ctx.fillStyle = '#0b0b14';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const me = players[myId];
+  const camX = me ? me.x : mapSize / 2;
+  const camY = me ? me.y : mapSize / 2;
+
+  let targetZoom = me ? Math.min(1, Math.max(0.3, 40 / me.r)) : 1;
+  currentZoom += (targetZoom - currentZoom) * 0.1;
+
+  ctx.save();
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.scale(currentZoom, currentZoom);
+  ctx.translate(-camX, -camY);
+
+  ctx.strokeStyle = '#151525';
+  ctx.lineWidth = 1;
+  for (let x = 0; x <= mapSize; x += 60) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, mapSize); ctx.stroke();
+  }
+  for (let y = 0; y <= mapSize; y += 60) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(mapSize, y); ctx.stroke();
+  }
+
+  ctx.strokeStyle = '#7b2cbf';
+  ctx.lineWidth = 6;
+  ctx.strokeRect(0, 0, mapSize, mapSize);
+
+  foods.forEach(f => {
+    ctx.fillStyle = f.color;
+    ctx.beginPath();
+    ctx.arc(f.x, f.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  viruses.forEach(v => {
+    ctx.fillStyle = '#38b000';
+    ctx.strokeStyle = '#007200';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(v.x, v.y, v.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  });
+
+  Object.values(players).forEach(p => {
+    ctx.save();
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = p.color;
+
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold ' + Math.max(13, p.r / 2.5) + 'px Segoe UI';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(p.name, p.x, p.y);
+  });
+
+  ctx.restore();
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
 </body>
 </html>`;
 
-// Basit oyun motoru mantığı için game.js içeriğini dışarı sunan rota
-const gameJsCode = `[cite: 4]`; // Buraya indirdiğin game.js kodunun tamamını ekleyeceğiz veya ayrı dosya yapacağız.
-
 const server = http.createServer((req, res) => {
-  if (req.url === '/game.js') {
-    res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8' });
-    // İndirdiğin game.js kodunun tamamı buraya gelecek
-    res.end(\`((\()=>{"use strict";var t={427:(t,e,s)=>{...}\n})();\`);
-  } else {
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end(htmlPage);
-  }
+  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+  res.end(htmlPage);
 });
 
 const wss = new WebSocket.Server({ server });
@@ -152,6 +328,18 @@ wss.on('connection', (ws) => {
           dy: 0,
           color: colors[Math.floor(Math.random() * colors.length)]
         };
+      } else if (data.type === 'move' && players[id]) {
+        players[id].dx = data.dx;
+        players[id].dy = data.dy;
+      } else if (data.type === 'split' && players[id] && players[id].r > 35) {
+        players[id].r *= 0.75;
+      } else if (data.type === 'eject' && players[id] && players[id].r > 28) {
+        players[id].r -= 1;
+        foods.push({
+          x: players[id].x + (players[id].dx / Math.hypot(players[id].dx, players[id].dy || 1)) * (players[id].r + 15),
+          y: players[id].y + (players[id].dy / Math.hypot(players[id].dx, players[id].dy || 1)) * (players[id].r + 15),
+          color: players[id].color
+        });
       }
     } catch (e) {}
   });
@@ -161,7 +349,51 @@ wss.on('connection', (ws) => {
   });
 });
 
+setInterval(() => {
+  const playerIds = Object.keys(players);
+
+  playerIds.forEach(id => {
+    const p = players[id];
+    const dist = Math.hypot(p.dx, p.dy);
+    if (dist > 5) {
+      let speed = Math.max(1.8, 5.5 - p.r * 0.02);
+      p.x += (p.dx / dist) * speed;
+      p.y += (p.dy / dist) * speed;
+    }
+    p.x = Math.max(p.r, Math.min(MAP_SIZE - p.r, p.x));
+    p.y = Math.max(p.r, Math.min(MAP_SIZE - p.r, p.y));
+
+    for (let i = foods.length - 1; i >= 0; i--) {
+      if (Math.hypot(p.x - foods[i].x, p.y - foods[i].y) < p.r) {
+        p.r += 0.4;
+        foods[i] = {
+          x: Math.random() * MAP_SIZE,
+          y: Math.random() * MAP_SIZE,
+          color: colors[Math.floor(Math.random() * colors.length)]
+        };
+      }
+    }
+
+    playerIds.forEach(otherId => {
+      if (id !== otherId && players[otherId]) {
+        const other = players[otherId];
+        if (p.r > other.r * 1.15 && Math.hypot(p.x - other.x, p.y - other.y) < p.r) {
+          p.r += other.r * 0.4;
+          delete players[otherId];
+        }
+      }
+    });
+  });
+
+  const payload = JSON.stringify({ type: 'state', players, foods, viruses });
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(payload);
+    }
+  });
+}, 33);
+
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
-  console.log('Orijinal game.js destekli sunucu calisiyor: ' + PORT);
+  console.log('Sigmally & SigMod v11.0.1 Özel Sunucu Çalışıyor: ' + PORT);
 });
